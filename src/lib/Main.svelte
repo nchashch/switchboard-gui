@@ -37,19 +37,13 @@
      const mainchain = Command.sidecar('binaries/drivechain-qt', args);
      console.log(mainchain);
      await mainchain.spawn();
-     let block_count = null;
-     for (let i = 0; i < 100; ++i) {
-         await invoke('mainchain', {
-             method: 'getblockcount',
-             params: [],
-         }).then(count => block_count = count)
-           .catch(() => {});
-         console.log(block_count);
-         if (block_count !== null) {
-             break;
-         }
+     while (!mainchain_running) {
          await new Promise(r => setTimeout(r, 1000));
      }
+     const block_count = await invoke('mainchain', {
+         method: 'getblockcount',
+         params: [],
+     });
      if (block_count < 200) {
          await invoke('mainchain', {
              method: 'createsidechainproposal',
@@ -113,7 +107,9 @@
      ];
      const ethereum = Command.sidecar('binaries/geth', args);
      ethereum_child = await ethereum.spawn();
-     await new Promise(r => setTimeout(r, 200));
+     while (!ethereum_running) {
+         await new Promise(r => setTimeout(r, 1000));
+     }
      ethereum_webview = new WebviewWindow('ethereumWindow', {
          url: '/ethereum',
      });

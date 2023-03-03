@@ -12,22 +12,9 @@
  let command = '';
  let index = -1;
 
- async function request(method, params) {
-     let response;
-     try {
-         response = await invoke(`${chain}`, { method, params });
-         response = JSON.stringify(response, null, 2);
-     } catch(e) {
-         console.log(e);
-         response = e;
-     }
-     return response;
- }
-
  let history_element;
 
  async function enter(e) {
-     console.log(e);
      if (e.code === 'ArrowUp') {
          command = history.filter(log => log.input !== '').at(index).input;
          index -= 1;
@@ -39,13 +26,11 @@
      if (command.length > 0 && e.code === 'Enter') {
          index = -1;
          await console_child.write(command + '\n');
-         console.log(output);
          history = [...history, {
              input: command,
              output: '',
          }];
          command = '';
-         console.log(history);
      }
  }
 
@@ -54,7 +39,6 @@
  };
 
  afterUpdate(() => {
-     console.log("afterUpdate");
      if(history_element) scrollToBottom(history_element);
  });
 
@@ -64,7 +48,6 @@
      config = await invoke('get_config');
      await launch_geth_console();
      appWindow.onCloseRequested(async (event) => {
-         console.log('killing console_child');
          await console_child.kill();
      });
  });
