@@ -37,11 +37,19 @@
      const mainchain = Command.sidecar('binaries/drivechain-qt', args);
      console.log(mainchain);
      await mainchain.spawn();
-     await new Promise(r => setTimeout(r, 2000));
-     let block_count = await invoke('mainchain', {
-         method: 'getblockcount',
-         params: [],
-     });
+     let block_count = null;
+     for (let i = 0; i < 100; ++i) {
+         await invoke('mainchain', {
+             method: 'getblockcount',
+             params: [],
+         }).then(count => block_count = count)
+           .catch(() => {});
+         console.log(block_count);
+         if (block_count !== null) {
+             break;
+         }
+         await new Promise(r => setTimeout(r, 1000));
+     }
      if (block_count < 200) {
          await invoke('mainchain', {
              method: 'createsidechainproposal',
