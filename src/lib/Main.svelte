@@ -57,7 +57,7 @@
          });
          await invoke('mainchain', {
              method: 'createsidechainproposal',
-             params: [4, 'testchain'],
+             params: [4, 'bitassets'],
          });
          await invoke('mainchain', {
              method: 'createsidechainproposal',
