@@ -78,7 +78,15 @@ async fn zcash(
     client
         .0
         .send_request(method, &params)
-        .map_err(|err| format!("{}", err))
+        .map_err(|err| match err {
+            ureq_jsonrpc::Error::Ureq(ureq::Error::Transport(transport)) => {
+                format!("{}", transport.message().unwrap())
+            }
+            ureq_jsonrpc::Error::Rpc(ureq_jsonrpc::RpcError { message, .. }) => {
+                format!("{}", message)
+            }
+            err @ _ => format!("{:?}", err),
+        })
 }
 
 #[tauri::command]
@@ -108,7 +116,9 @@ async fn main() -> Result<()> {
         std::fs::create_dir_all(datadir.join("data/testchain"))?;
         std::fs::create_dir_all(datadir.join("data/bitassets"))?;
         std::fs::create_dir_all(datadir.join("data/ethereum"))?;
+        std::fs::create_dir_all(datadir.join("data/zcash"))?;
         ethereum_regtest_setup(&datadir)?;
+        zcash_setup(&datadir)?;
     }
     let geth_console = {
         let ipc_file = datadir.join("data/ethereum/geth.ipc");
@@ -252,5 +262,17 @@ pub fn ethereum_regtest_setup(datadir: &Path) -> Result<()> {
             format!("{}", genesis_json_path.display()),
         ])
         .spawn()?;
+    Ok(())
+}
+
+pub fn zcash_setup(datadir: &Path) -> Result<()> {
+    let zcash_datadir = datadir.join("data/zcash");
+    std::fs::create_dir_all(datadir.join(&zcash_datadir))?;
+    let zcash_conf_path = zcash_datadir.join("zcash.conf");
+    let zcash_conf = "nuparams=5ba81b19:1
+nuparams=76b809bb:1";
+    dbg!(&zcash_conf_path);
+    std::fs::write(zcash_conf_path, zcash_conf)?;
+    tauri::api::process::Command::new_sidecar("fetch-params.sh")?.spawn()?;
     Ok(())
 }

@@ -1,4 +1,5 @@
 <script>
+ import ZcashDepositsWithdrawals from './ZcashDepositsWithdrawals.svelte';
  import DepositsWithdrawals from './DepositsWithdrawals.svelte';
  import { onMount } from 'svelte';
  import { invoke } from '@tauri-apps/api/tauri';
@@ -15,8 +16,13 @@
          });
      }
      if (bitassets_running) {
-
          await invoke('bitassets', {
+             method: 'refreshbmm',
+             params: [0.0001],
+         });
+     }
+     if (zcash_running) {
+         await invoke('zcash', {
              method: 'refreshbmm',
              params: [0.0001],
          });
@@ -119,13 +125,46 @@
  }
 
 
+ async function launch_zcash() {
+     const args = [
+         `-regtest=${config.config.switchboard.regtest ? 1 : 0}`,
+         `-datadir=${await join(config.datadir, 'data/zcash')}`,
+         `-rpcport=${config.config.zcash.port}`,
+         `-mainport=${config.config.main.port}`,
+         `-rpcuser=${config.config.switchboard.rpcuser}`,
+         `-rpcpassword=${config.config.switchboard.rpcpassword}`,
+         '-server=1'
+     ];
+     const zcash = Command.sidecar('binaries/zcashd', args);
+     zcash_child = await zcash.spawn();
+     await new Promise(r => setTimeout(r, 200));
+     zcash_webview = new WebviewWindow('zcashWindow', {
+         url: '/zcash',
+     });
+     zcash_webview.onCloseRequested(async (event) => {
+         await stop_zcash();
+     });
+ }
+
+ async function stop_zcash() {
+     await invoke('zcash', {
+         method: 'stop',
+         params: [],
+     });
+ }
+
+
  let ethereum_child = null;
  let ethereum_webview = null;
+
+ let zcash_child = null;
+ let zcash_webview = null;
 
  let mainchain_running = false;
  let testchain_running = false;
  let bitassets_running = false;
  let ethereum_running = false;
+ let zcash_running = false;
 
  async function update() {
      invoke('mainchain', {
@@ -143,6 +182,11 @@
          params: [],
      }).then(() => { bitassets_running = true; })
        .catch(() => { bitassets_running = false; });
+     invoke('zcash', {
+         method: 'getblockcount',
+         params: [],
+     }).then(() => { zcash_running = true; })
+       .catch(() => { zcash_running = false; });
      invoke('web3', {
          method: 'eth_blockNumber',
          params: [],
@@ -192,6 +236,13 @@
                 Ethereum node running...
             {/if}
         </li>
+        <li>
+            {#if !zcash_running}
+                <button on:click={launch_zcash}>Launch Zcash</button>
+            {:else}
+                <button on:click={stop_zcash}>Stop Zcash</button>
+            {/if}
+        </li>
         {/if}
     </ul>
 </div>
@@ -202,10 +253,13 @@
 </div>
 {/if}
 {#if testchain_running}
-<DepositsWithdrawals sidechain={['testchain', 0]} />
+    <DepositsWithdrawals sidechain={['testchain', 0]} />
 {/if}
 {#if bitassets_running}
-<DepositsWithdrawals sidechain={['bitassets', 4]} />
+    <DepositsWithdrawals sidechain={['bitassets', 4]} />
+{/if}
+{#if zcash_running}
+    <ZcashDepositsWithdrawals sidechain={['zcash', 5]} />
 {/if}
 
 <style>

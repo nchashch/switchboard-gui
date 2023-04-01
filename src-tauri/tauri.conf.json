@@ -32,6 +32,11 @@
             "args": true
           },
           {
+            "name": "binaries/zcashd",
+            "sidecar": true,
+            "args": true
+          },
+          {
             "name": "binaries/geth",
             "sidecar": true,
             "args": true
@@ -50,6 +55,7 @@
         "binaries/drivechain-qt",
         "binaries/testchain-qt",
         "binaries/bitassets-qt",
+        "binaries/zcashd",
         "binaries/geth"
       ],
       "icon": [

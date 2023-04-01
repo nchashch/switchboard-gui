@@ -9,10 +9,22 @@
  let console_child = null;
 
  let history = [];
- let command = 'eth.blockNumber';
+ let command = 'getblockcount';
  let index = -1;
 
  let history_element;
+
+ async function request(method, params) {
+     let response;
+     try {
+         response = await invoke('zcash', { method, params });
+         response = JSON.stringify(response, null, 2);
+     } catch(e) {
+         console.log(e);
+         response = e;
+     }
+     return response;
+ }
 
  async function enter(e) {
      if (e.code === 'ArrowUp') {
@@ -24,11 +36,22 @@
          command = history.filter(log => log.input !== '').at(index).input;
      }
      if (command.length > 0 && e.code === 'Enter') {
+         console.log('enter');
          index = -1;
-         await console_child.write(command + '\n');
+
+         const terms = command.split(/\s+/);
+         const method = terms[0];
+         const params = terms.slice(1).map(param => {
+             try {
+                 return JSON.parse(param);
+             } catch(e) {
+                 return param;
+             }
+         });
+         const output = await request(method, params);
          history = [...history, {
              input: command,
-             output: '',
+             output: output,
          }];
          command = '';
      }
@@ -46,42 +69,13 @@
 
  onMount(async () => {
      config = await invoke('get_config');
-     await launch_geth_console();
-     appWindow.onCloseRequested(async (event) => {
-         await console_child.kill();
-     });
  });
 
- async function launch_geth_console() {
-     const args = [
-         'attach',
-         await join(config.datadir, 'data/ethereum/geth.ipc')
-     ]
-     const console = Command.sidecar('binaries/geth', args);
-     console.stdout.on('data', line => {
-         if (line !== '> ') {
-             history = [...history, {
-                 input: '',
-                 output: line,
-             }];
-         }
-     });
-
-     console.stderr.on('data', line => {
-         history = [...history, {
-             input: '',
-             output: line,
-         }];
-     });
-
-     console_child = await console.spawn();
-     await new Promise(r => setTimeout(r, 100));
- }
  let output = [];
 
 </script>
 <div class="console">
-    <h1>Geth Console</h1>
+    <h1>Zcash Console</h1>
     <div bind:this={history_element} class="console-history">
         {#each history as command}
             {#if command.input}

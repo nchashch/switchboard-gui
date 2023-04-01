@@ -3480,6 +3480,7 @@ dependencies = [
  "tauri-build",
  "thiserror",
  "tokio",
+ "ureq",
  "ureq-jsonrpc",
  "web3",
 ]
