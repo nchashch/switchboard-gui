@@ -14,6 +14,7 @@ use web3::Transport;
 struct Main(ureq_jsonrpc::Client);
 struct Testchain(ureq_jsonrpc::Client);
 struct BitAssets(ureq_jsonrpc::Client);
+struct BitNames(ureq_jsonrpc::Client);
 struct Zcash(ureq_jsonrpc::Client);
 struct Web3(web3::transports::Http);
 
@@ -70,6 +71,18 @@ async fn bitassets(
 }
 
 #[tauri::command]
+async fn bitnames(
+    client: tauri::State<'_, BitNames>,
+    method: &str,
+    params: Vec<ureq_jsonrpc::Value>,
+) -> Result<Value, String> {
+    client
+        .0
+        .send_request(method, &params)
+        .map_err(|err| format!("{}", err))
+}
+
+#[tauri::command]
 async fn zcash(
     client: tauri::State<'_, Zcash>,
     method: &str,
@@ -115,6 +128,7 @@ async fn main() -> Result<()> {
         std::fs::create_dir_all(datadir.join("data/main"))?;
         std::fs::create_dir_all(datadir.join("data/testchain"))?;
         std::fs::create_dir_all(datadir.join("data/bitassets"))?;
+        std::fs::create_dir_all(datadir.join("data/bitnames"))?;
         std::fs::create_dir_all(datadir.join("data/ethereum"))?;
         std::fs::create_dir_all(datadir.join("data/zcash"))?;
         ethereum_regtest_setup(&datadir)?;
@@ -146,6 +160,13 @@ async fn main() -> Result<()> {
         password: config.switchboard.rpcpassword.clone(),
         id: "switchboard-gui".to_string(),
     };
+    let bitnames_client = ureq_jsonrpc::Client {
+        host: "localhost".to_string(),
+        port: config.bitnames.port,
+        user: config.switchboard.rpcuser.clone(),
+        password: config.switchboard.rpcpassword.clone(),
+        id: "switchboard-gui".to_string(),
+    };
     let zcash_client = ureq_jsonrpc::Client {
         host: "localhost".to_string(),
         port: config.zcash.port,
@@ -161,6 +182,7 @@ async fn main() -> Result<()> {
         .manage(Main(main_client.clone()))
         .manage(Testchain(testchain_client.clone()))
         .manage(BitAssets(bitassets_client.clone()))
+        .manage(BitNames(bitnames_client.clone()))
         .manage(Zcash(zcash_client.clone()))
         .manage(Web3(web3_client))
         .manage(GethConsole(geth_console))
@@ -170,6 +192,7 @@ async fn main() -> Result<()> {
             mainchain,
             testchain,
             bitassets,
+            bitnames,
             zcash,
             web3
         ])
@@ -180,6 +203,7 @@ async fn main() -> Result<()> {
             kill_ethereum();
             testchain_client.send_request::<ureq_jsonrpc::Value>("stop", &[]);
             bitassets_client.send_request::<ureq_jsonrpc::Value>("stop", &[]);
+            bitnames_client.send_request::<ureq_jsonrpc::Value>("stop", &[]);
             zcash_client.send_request::<ureq_jsonrpc::Value>("stop", &[]);
             main_client.send_request::<ureq_jsonrpc::Value>("stop", &[]);
         }

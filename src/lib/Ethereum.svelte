@@ -156,6 +156,6 @@
      box-sizing: border-box;
  }
  .console {
-     height: 800px;
+     height: 400px;
  }
 </style>

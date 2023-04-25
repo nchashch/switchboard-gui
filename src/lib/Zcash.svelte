@@ -14,6 +14,15 @@
 
  let history_element;
 
+ let zcash_running = false;
+ async function update() {
+     invoke('zcash', {
+         method: 'getblockcount',
+         params: [],
+     }).then(() => { zcash_running = true; })
+       .catch(() => { zcash_running = false; });
+ }
+
  async function request(method, params) {
      let response;
      try {
@@ -69,29 +78,34 @@
 
  onMount(async () => {
      config = await invoke('get_config');
+     setInterval(update, 1000);
  });
 
  let output = [];
 
 </script>
-<div class="console">
-    <h1>Zcash Console</h1>
-    <div bind:this={history_element} class="console-history">
-        {#each history as command}
-            {#if command.input}
-                <div class="console-input-log">
-                    {command.input}
-                </div>
-            {/if}
-            {#if command.output}
-                <div class="console-output-log">
-                    <pre>{command.output}</pre>
-                </div>
-            {/if}
-        {/each}
+{#if zcash_running}
+    <div class="console">
+        <h1>Zcash Console</h1>
+        <div bind:this={history_element} class="console-history">
+            {#each history as command}
+                {#if command.input}
+                    <div class="console-input-log">
+                        {command.input}
+                    </div>
+                {/if}
+                {#if command.output}
+                    <div class="console-output-log">
+                        <pre>{command.output}</pre>
+                    </div>
+                {/if}
+            {/each}
+        </div>
+        <input bind:value={command} on:keydown={enter} class="console-input" type="text" spellcheck="false">
     </div>
-    <input bind:value={command} on:keydown={enter} class="console-input" type="text" spellcheck="false">
-</div>
+{:else}
+    <h1>Loading Zcash...</h1>
+{/if}
 <style>
  .console {
      border: solid;
@@ -150,6 +164,6 @@
      box-sizing: border-box;
  }
  .console {
-     height: 800px;
+     height: 400px;
  }
 </style>

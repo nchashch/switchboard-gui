@@ -21,6 +21,12 @@
              params: [0.0001],
          });
      }
+     if (bitnames_running) {
+         await invoke('bitnames', {
+             method: 'refreshbmm',
+             params: [0.0001],
+         });
+     }
      if (zcash_running) {
          await invoke('zcash', {
              method: 'refreshbmm',
@@ -68,6 +74,10 @@
              params: [6, 'ethereum'],
          });
          await invoke('mainchain', {
+             method: 'createsidechainproposal',
+             params: [7, 'bitnames'],
+         });
+         await invoke('mainchain', {
              method: 'generate',
              params: [200],
          });
@@ -98,6 +108,19 @@
      ];
      const bitassets = Command.sidecar('binaries/bitassets-qt', args);
      await bitassets.spawn();
+ }
+
+ async function launch_bitnames() {
+     const args = [
+         `-regtest=${config.config.switchboard.regtest ? 1 : 0}`,
+         `-datadir=${await join(config.datadir, 'data/bitnames')}`,
+         `-rpcport=${config.config.bitnames.port}`,
+         `-rpcuser=${config.config.switchboard.rpcuser}`,
+         `-rpcpassword=${config.config.switchboard.rpcpassword}`,
+         '-server=1'
+     ];
+     const bitnames = Command.sidecar('binaries/bitnames-qt', args);
+     await bitnames.spawn();
  }
 
  async function launch_ethereum() {
@@ -163,6 +186,7 @@
  let mainchain_running = false;
  let testchain_running = false;
  let bitassets_running = false;
+ let bitnames_running = false;
  let ethereum_running = false;
  let zcash_running = false;
 
@@ -182,6 +206,11 @@
          params: [],
      }).then(() => { bitassets_running = true; })
        .catch(() => { bitassets_running = false; });
+     invoke('bitnames', {
+         method: 'getblockcount',
+         params: [],
+     }).then(() => { bitnames_running = true; })
+       .catch(() => { bitnames_running = false; });
      invoke('zcash', {
          method: 'getblockcount',
          params: [],
@@ -230,6 +259,13 @@
             {/if}
         </li>
         <li>
+            {#if !bitnames_running}
+                <button on:click={launch_bitnames}>Launch Bitnames Qt</button>
+            {:else}
+                BitNames node running...
+            {/if}
+        </li>
+        <li>
             {#if !ethereum_running}
                 <button on:click={launch_ethereum}>Launch Ethereum</button>
             {:else}
@@ -257,6 +293,9 @@
 {/if}
 {#if bitassets_running}
     <DepositsWithdrawals sidechain={['bitassets', 4]} />
+{/if}
+{#if bitnames_running}
+    <DepositsWithdrawals sidechain={['bitnames', 7]} />
 {/if}
 {#if zcash_running}
     <ZcashDepositsWithdrawals sidechain={['zcash', 5]} />
